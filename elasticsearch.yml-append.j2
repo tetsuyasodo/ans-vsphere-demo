@@ -1,0 +1,10 @@
+### appended by ansible playbook
+network.host: 0.0.0.0
+discovery.seed_hosts:
+{% for node in _nodes %}
+  - "{{ node.hostname }}"
+{% endfor %}
+cluster.initial_master_nodes:
+{% for node in _nodes %}
+  - "{{ node.hostname }}"
+{% endfor %}
