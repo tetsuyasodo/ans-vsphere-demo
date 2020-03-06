@@ -1,0 +1,26 @@
+- hosts: 127.0.0.1
+  tasks:
+  - name: Delete instance
+    vmware_guest:
+      hostname: "{{hostname}}"
+      username: "{{user_name}}"
+      password: "{{password}}"
+      datacenter: Ojima3F-cnta
+      cluster: cluster01
+      folder: vlan013-sodo
+      name: "{{vmname}}{{item}}"
+      template: "{{template}}"
+      networks:
+      - name: VLAN013PortGroup
+        type: dhcp
+      state: absent
+      force: true
+      disk:
+      - datastore: vsanDatastore
+        size_gb: 100
+        type: thin
+      - datastore: vsanDatastore
+        size_gb: 100
+        type: thin
+      validate_certs: no
+    with_sequence: count={{number}}
