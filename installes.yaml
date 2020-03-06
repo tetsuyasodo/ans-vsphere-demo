@@ -1,0 +1,89 @@
+- hosts: all
+  tasks:
+
+  - name: set hostname
+    hostname:
+      name: "{{ name }}"
+
+  - name: Set node information
+    set_fact:
+      _nodes: "{{ _nodes | default([]) + [{'hostname': hostvars[item].ansible_hostname, 'address': hostvars[item].ansible_default_ipv4.address}] }}"
+    run_once: yes
+    with_items: "{{ ansible_play_hosts }}"
+
+  - name: Distribute hosts file
+    template:
+      src: hosts.j2
+      dest: /etc/hosts
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes
+
+  - name: firewall setting 5601,9200,9300
+    firewalld:
+      port: "{{ item }}/tcp"
+      zone: public
+      state: enabled
+      permanent: true
+      immediate: true
+    with_items:
+      - 5601
+      - 9200
+      - 9300
+
+  - name: gpg install
+    shell: rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+  - name: create repo file
+    shell:
+      cmd: |
+        cat << EOC >/etc/yum.repos.d/elastic.repo
+        [elasticsearch-7.x]
+        name=Elasticsearch repository for 7.x packages
+        baseurl=https://artifacts.elastic.co/packages/7.x/yum
+        gpgcheck=1
+        gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        enabled=1
+        autorefresh=1
+        type=rpm-md
+        EOC
+    register: result
+
+  - name: es and kibana install
+    yum:
+      name:
+        - elasticsearch
+        - kibana
+      state: latest
+
+  - name: Manipulate es.yml file
+    template:
+      src: elasticsearch.yml-append.j2
+      dest: elasticsearch.yml-append
+      owner: root
+      group: root
+      mode: 0644
+      backup: yes
+
+  - name: es config append
+    shell:
+      cmd: |
+        cat elasticsearch.yml-append >>/etc/elasticsearch/elasticsearch.yml
+
+  - name: kibana config
+    shell:
+      cmd: |
+        cat << EOC >> /etc/kibana/kibana.yml
+        server.host: "0.0.0.0"
+        EOC
+
+  - name: service running and enabled
+    service:
+      name: "{{ item }}"
+      state: started
+      enabled: yes
+    with_items:
+      - elasticsearch
+      - kibana
+
