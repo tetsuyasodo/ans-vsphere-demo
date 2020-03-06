@@ -1,0 +1,18 @@
+- hosts: all
+  tasks:
+  - name: httpd install and config
+    yum:
+      name: httpd
+      state: latest
+  - name: httpd running and enabled
+    service:
+      name: httpd
+      state: started
+      enabled: yes
+  - name: firewall setting 80
+    firewalld:
+      service: http
+      zone: public
+      state: enabled
+      permanent: true
+      immediate: true
